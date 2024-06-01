@@ -169,6 +169,7 @@ export interface PlaceCardProps {
   urls: string[];
   insertedAt: string;
   listId: string | number;
+  allTags: string[];
 }
 
 export function PlaceCard({
@@ -179,6 +180,7 @@ export function PlaceCard({
   urls,
   insertedAt,
   listId,
+  allTags,
 }: PlaceCardProps) {
   const [dialog, setDialog] = useState<'delete' | 'edit'>();
   const href = `/app/list/${id}`;
@@ -203,7 +205,7 @@ export function PlaceCard({
         }}
         open={dialog === 'edit'}
         onOpenChange={(open) => setDialog(open ? 'edit' : undefined)}
-        tags={tags}
+        tags={allTags}
       />
 
       <div className="flex flex-col items-start gap-2 rounded-lg border p-2 pt-0 pb-1 text-left text-sm transition-all w-full">

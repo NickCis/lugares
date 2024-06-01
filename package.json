@@ -1,8 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
+    "deploy": "vercel deploy --prod",
+    "dev": "next dev",
     "format": "prettier --write '{app,components,lib}/**/*.{js,ts,tsx}' components.json next.config.js next-env.d.ts postcss.config.js prettier.config.js tailwind.config.ts tsconfig.json middleware.ts",
     "start": "next start",
     "supabase": "supabase"
@@ -42,7 +43,8 @@
     "@types/react-dom": "18.2.18",
     "encoding": "^0.1.13",
     "prettier": "^3.2.5",
-    "supabase": "^1.167.4"
+    "supabase": "^1.167.4",
+    "vercel": "^34.2.4"
   },
   "engines": {
     "node": "20.x"

@@ -190,7 +190,6 @@ function Content({
   });
   const isSubmitting = form.formState.isSubmitting;
   const errors = form.formState.errors;
-  console.log('form.getValues(tags)', form.getValues('tags'));
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const supabase = createClient();

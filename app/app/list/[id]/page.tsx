@@ -72,7 +72,7 @@ export default async function List({ params, searchParams }: ListProps) {
 
   return (
     <Wrapper>
-      <Content className="w-full max-w-4xl pt-6">
+      <Content className="w-full max-w-4xl pt-6 px-2 lg:px-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl font-bold tracking-tight">{list.title}</h2>
           <div className="flex items-center space-x-2">
@@ -110,6 +110,7 @@ export default async function List({ params, searchParams }: ListProps) {
                 urls={place.urls}
                 insertedAt={place.inserted_at}
                 listId={place.list_id}
+                allTags={tags}
               />
             </div>
           ))}
