@@ -1,6 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import {
+  useState,
+  type ComponentType,
+  type ReactNode,
+  type HTMLProps,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Search } from 'lucide-react';
 import {
@@ -11,14 +16,15 @@ import {
 import { cn } from '@/lib/utils';
 import { normalize } from '@/lib/string';
 
-export function Item({
-  value,
-  onSelect,
-  children,
-  checked,
-  selected,
-  ...props
-}) {
+// fix-vim-highligh = }
+
+export interface ItemProps extends HTMLProps<HTMLDivElement> {
+  children: ReactNode;
+  checked?: boolean;
+  selected?: boolean;
+}
+
+export function Item({ children, checked, selected, ...props }: ItemProps) {
   return (
     <div
       {...props}
@@ -45,10 +51,25 @@ function getSelectedIndex(
     : selected % filteredLength;
 }
 
-function filterTags(options, value) {
+function filterTags(options: string[], value: string) {
   return options
     .filter((tag) => !value || normalize(tag).startsWith(value))
     .slice(0, 20);
+}
+
+type EmptyStringOrRenderFunction =
+  | string
+  | ((p: { value: string; input: string; options: string[] }) => ReactNode);
+
+interface ContentProps {
+  options: string[];
+  input: string;
+  value: string;
+  values: string[];
+  selected: null | number;
+  onSelect: (s: number) => void;
+  onCheck: (t: string) => void;
+  empty: EmptyStringOrRenderFunction;
 }
 
 function Content({
@@ -60,7 +81,7 @@ function Content({
   onSelect,
   onCheck,
   empty,
-}) {
+}: ContentProps) {
   const filtered = filterTags(options, value);
 
   if (filtered.length)
@@ -82,15 +103,27 @@ function Content({
   return <Item>{empty}</Item>;
 }
 
-export function Autocomplete({
+export interface AutocompleteProps {
+  options: string[];
+  values: string[];
+  setValues: (v: string[] | ((n: string[]) => string[])) => void;
+  empty: EmptyStringOrRenderFunction;
+  onCreateOption?: (opt: string) => void;
+}
+
+export function Autocomplete<Props extends HTMLProps<HTMLInputElement>>({
   options,
   values,
   setValues,
-  Component = 'input',
+  Component: C,
   empty = 'Not found.',
   onCreateOption,
   ...rest
-}) {
+}: AutocompleteProps &
+  Props & {
+    Component: ComponentType<Props>;
+  }) {
+  const Component = C as ComponentType<HTMLProps<HTMLInputElement>>;
   const [value, setValue] = useState<{
     value: string;
     label: string;
@@ -100,7 +133,11 @@ export function Autocomplete({
     label: '',
     selected: null,
   });
-  const [open, setOpen] = useState<{ open: boolean; focus: boolean }>({
+  const [open, setOpen] = useState<{
+    open: boolean;
+    focus: boolean;
+    popover: boolean;
+  }>({
     open: false,
     focus: false,
     popover: false,
@@ -142,9 +179,10 @@ export function Autocomplete({
           }
           value={value.label}
           onChange={(e) => {
+            const target = e.target as HTMLInputElement;
             setValue({
-              label: e.target.value,
-              value: normalize(e.target.value),
+              label: target.value,
+              value: normalize(target.value),
               selected: null,
             });
             if (!open.open) setOpen((o) => ({ ...o, open: true }));

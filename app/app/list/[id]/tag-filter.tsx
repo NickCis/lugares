@@ -27,10 +27,16 @@ const Input = forwardRef<
 
 Input.displayName = 'Input';
 
-export function TagFilter({ tags, filters, url }) {
+export interface TagFilterProps {
+  tags: string[];
+  filters: string[];
+  url: string;
+}
+
+export function TagFilter({ tags, filters, url }: TagFilterProps) {
   const router = useRouter();
-  function setValues(f) {
-    const next = f(filters);
+  function setValues(f: string[] | ((v: string[]) => string[])) {
+    const next = typeof f === 'function' ? f(filters) : f;
     const mapped = next.map((v) => `tags=${encodeURIComponent(v)}`).join('&');
     router.push(mapped ? `${url}?${mapped}` : url);
   }

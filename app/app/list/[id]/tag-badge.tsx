@@ -1,7 +1,14 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, ComponentProps } from 'react';
 import Link from 'next/link';
 import { Trash } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+
+export interface TagBadgeProps extends ComponentProps<typeof Badge> {
+  value: string;
+  filters: string[];
+  children: ReactNode;
+  url: string;
+}
 
 export function TagBadge({
   value,
@@ -9,11 +16,7 @@ export function TagBadge({
   children,
   url,
   ...props
-}: {
-  value: string;
-  filters: string[];
-  children: ReactNode;
-}) {
+}: TagBadgeProps) {
   const mapped = filters
     .filter((f) => f !== value)
     .map((v) => `tags=${encodeURIComponent(v)}`)

@@ -1,9 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import {
+  useState,
+  type ReactNode,
+  type ComponentProps,
+  type MouseEvent,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import formatDistanceToNow from 'date-fns/formatDistanceToNow';
+// import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import { Lock, Earth, EllipsisVertical, MoreVertical } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
@@ -30,19 +35,22 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { ShareListDialog } from './share-list-dialog';
 
+// fix-vim-highlight = }
+
+interface ConfirmDeleteDialogProps extends ComponentProps<typeof AlertDialog> {
+  children?: ReactNode;
+  id: string | number;
+}
 export function ConfirmDeleteDialog({
   children,
   id,
   ...props
-}: {
-  children?: ReactNode;
-  id;
-}) {
+}: ConfirmDeleteDialogProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const onClick = async (event) => {
+  const onClick = async (event: MouseEvent) => {
     event.preventDefault();
     try {
       setLoading(true);
@@ -55,7 +63,7 @@ export function ConfirmDeleteDialog({
         .delete()
         .eq('list_id', id)
         .eq('user_id', user.id);
-      if (error) throw new Error(error.message || error);
+      if (error) throw new Error(error.message);
       router.refresh();
       if (props.onOpenChange) props.onOpenChange(false);
       toast({
@@ -66,7 +74,7 @@ export function ConfirmDeleteDialog({
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description: e.message || e.toString(),
+        description: (e as Error).message || (e as Error).toString(),
       });
     }
   };
@@ -96,12 +104,23 @@ export function ConfirmDeleteDialog({
   );
 }
 
-export function ListCard({ id, title, description, isPrivate, insertedAt }) {
+export interface ListCardProps {
+  id: string | number;
+  title: string;
+  description: string;
+  isPrivate: boolean;
+  insertedAt: string;
+}
+
+export function ListCard({
+  id,
+  title,
+  description,
+  isPrivate,
+  insertedAt,
+}: ListCardProps) {
   const [dialog, setDialog] = useState<'delete' | 'share'>();
   const Icon = isPrivate ? Lock : Earth;
-  const distanceFromNow = formatDistanceToNow(new Date(insertedAt), {
-    addSuffix: true,
-  });
   const href = `/app/list/${id}`;
 
   return (
@@ -125,9 +144,11 @@ export function ListCard({ id, title, description, isPrivate, insertedAt }) {
                 {title}
               </Link>
             </div>
-            <div className="ml-auto text-xs text-muted-foreground pr-2">
-              {distanceFromNow}
-            </div>
+            {/*<div className="ml-auto text-xs text-muted-foreground pr-2">
+              {formatDistanceToNow(new Date(insertedAt), {
+                addSuffix: true,
+              })}
+            </div> */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="-mr-3 h-9 w-9">

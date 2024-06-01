@@ -29,7 +29,7 @@ function AlertMessage({ type, message }: { type?: string; message: string }) {
 export default function Login({
   searchParams,
 }: {
-  searchParams: { message: string };
+  searchParams: { message: string; type?: string };
 }) {
   const signIn = async (formData: FormData) => {
     'use server';

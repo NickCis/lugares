@@ -1,6 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect,
+  type Dispatch,
+  type SetStateAction,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { Send, Trash } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useForm } from 'react-hook-form';
@@ -31,11 +38,21 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
 
+import type { Invite } from '@/interfaces/invite';
+
+// fix-vim-highlight = }
+
 const formSchema = z.object({
   email: z.string().email(),
 });
 
-function DeleteButton({ email, listId, onDelete }) {
+interface DeleteButtonProps {
+  email: string;
+  listId: string | number;
+  onDelete: () => void;
+}
+
+function DeleteButton({ email, listId, onDelete }: DeleteButtonProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   return (
@@ -60,7 +77,7 @@ function DeleteButton({ email, listId, onDelete }) {
           toast({
             variant: 'destructive',
             title: 'Uh oh! Something went wrong.',
-            description: error.message,
+            description: (error as Error).message,
           });
           setLoading(false);
         }
@@ -71,20 +88,28 @@ function DeleteButton({ email, listId, onDelete }) {
   );
 }
 
-async function fetchInvites(id, setInvites, cancelRef = {}) {
+async function fetchInvites(
+  id: string | number,
+  setInvites: Dispatch<SetStateAction<Invite[] | undefined>>,
+  cancelRef: { current?: boolean } = {},
+) {
   const supabase = createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('list_invites')
     .select()
     .eq('list_id', id);
   if (cancelRef.current) return;
-  setInvites(data);
+  if (error) throw new Error(error.message);
+  if (data) setInvites(data);
 }
 
-function Content({ id }) {
+interface ContentProps {
+  id: number | string;
+}
+
+function Content({ id }: ContentProps) {
   const { toast } = useToast();
-  const [invites, setInvites] =
-    useState<{ list_id: string | number; email: string }[]>();
+  const [invites, setInvites] = useState<Invite[]>();
 
   useEffect(() => {
     const cancelRef = {
@@ -114,7 +139,7 @@ function Content({ id }) {
       if (error) throw error;
       fetchInvites(id, setInvites);
     } catch (e) {
-      if (e.code === '23505') {
+      if ((e as any)?.code === '23505') {
         // duplicate
         toast({
           variant: 'destructive',
@@ -127,7 +152,7 @@ function Content({ id }) {
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description: e.message || e.toString(),
+        description: (e as Error).message || (e as Error).toString(),
       });
 
       fetchInvites(id, setInvites);
@@ -203,7 +228,16 @@ function Content({ id }) {
   );
 }
 
-export function ShareListDialog({ id, children, ...props }) {
+export interface ShareListDialogProps extends ComponentProps<typeof Dialog> {
+  id: number | string;
+  children?: ReactNode;
+}
+
+export function ShareListDialog({
+  id,
+  children,
+  ...props
+}: ShareListDialogProps) {
   return (
     <Dialog {...props}>
       {children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}

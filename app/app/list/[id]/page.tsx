@@ -5,14 +5,15 @@ import { createClient } from '@/lib/supabase/server';
 import { Content } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { normalize } from '@/lib/string';
-
 import { Wrapper } from '@/app/app/wrapper';
+import type { Place } from '@/interfaces/place';
+
 import { AddPlaceDialog } from './add-place-dialog';
 import { PlaceCard } from './place-card';
 import { TagFilter } from './tag-filter';
 import { TagBadge } from './tag-badge';
 
-function getTags(places) {
+function getTags(places: Place[]): string[] {
   const set = new Set<string>();
   for (const place of places) {
     for (const tag of place.tags) {
@@ -20,20 +21,18 @@ function getTags(places) {
     }
   }
 
-  const entries = [...set];
+  const entries = Array.from(set);
   entries.sort((a, b) => a.localeCompare(b));
 
   return entries;
 }
 
-export default async function List({
-  params,
-  searchParams,
-  ...rest
-}: {
+export interface ListProps {
   params: { id: string };
   searchParams: { [key: string]: string | string[] | undefined };
-}) {
+}
+
+export default async function List({ params, searchParams }: ListProps) {
   const supabase = createClient();
   const {
     data: { user },
@@ -53,9 +52,9 @@ export default async function List({
   }
 
   const tags = getTags(list.places);
-  let places = list.places;
+  let places = list.places as Place[];
 
-  let filters = [];
+  let filters: string[] = [];
   if (searchParams.tags) {
     filters = Array.isArray(searchParams.tags)
       ? searchParams.tags

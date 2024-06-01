@@ -16,7 +16,9 @@ export default async function App() {
     .from('lists')
     .select('*, list_owners(user_id)')
     .eq('list_owners.user_id', user.id);
-  const lists = data.filter(({ list_owners }) => list_owners.length > 0);
+  const lists = (data || []).filter(
+    ({ list_owners }) => list_owners.length > 0,
+  );
 
   return (
     <Wrapper>

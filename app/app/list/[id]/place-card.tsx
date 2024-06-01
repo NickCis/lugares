@@ -1,6 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import {
+  useState,
+  type ReactNode,
+  type ComponentProps,
+  type MouseEvent,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -46,7 +51,13 @@ import { WhatsApp } from '@/icons/whatsapp';
 
 import { AddPlaceDialog } from './add-place-dialog';
 
-function IconLink({ href }: { href: string }) {
+// fix-vim-higlight = }
+
+interface IconLinkProps {
+  href: string;
+}
+
+function IconLink({ href }: IconLinkProps) {
   const Icon = href.match(/^\s*https?:\/\/(www\.)?instagram\.com/i)
     ? Instagram
     : href.match(
@@ -84,19 +95,22 @@ function IconLink({ href }: { href: string }) {
   );
 }
 
+export interface ConfirmDeleteDialogProps
+  extends ComponentProps<typeof AlertDialog> {
+  children?: ReactNode;
+  id: string | number;
+}
+
 export function ConfirmDeleteDialog({
   children,
   id,
   ...props
-}: {
-  children?: ReactNode;
-  id;
-}) {
+}: ConfirmDeleteDialogProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const onClick = async (event) => {
+  const onClick = async (event: MouseEvent) => {
     event.preventDefault();
     try {
       setLoading(true);
@@ -105,7 +119,7 @@ export function ConfirmDeleteDialog({
       if (!data?.user) throw new Error('Not logged in');
       const user = data.user;
       const { error } = await supabase.from('places').delete().eq('id', id);
-      if (error) throw new Error(error.message || error);
+      if (error) throw new Error(error.message);
       router.refresh();
       if (props.onOpenChange) props.onOpenChange(false);
       toast({
@@ -116,7 +130,7 @@ export function ConfirmDeleteDialog({
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description: e.message || e.toString(),
+        description: (e as Error).message || (e as Error).toString(),
       });
     }
   };
@@ -147,6 +161,16 @@ export function ConfirmDeleteDialog({
   );
 }
 
+export interface PlaceCardProps {
+  id: string | number;
+  title: string;
+  description: string;
+  tags: string[];
+  urls: string[];
+  insertedAt: string;
+  listId: string | number;
+}
+
 export function PlaceCard({
   id,
   title,
@@ -155,7 +179,7 @@ export function PlaceCard({
   urls,
   insertedAt,
   listId,
-}) {
+}: PlaceCardProps) {
   const [dialog, setDialog] = useState<'delete' | 'edit'>();
   const href = `/app/list/${id}`;
 
@@ -174,8 +198,8 @@ export function PlaceCard({
           description,
           tags,
           urls,
-          inserted_at: insertedAt,
-          list_id: listId,
+          // inserted_at: insertedAt,
+          // list_id: listId,
         }}
         open={dialog === 'edit'}
         onOpenChange={(open) => setDialog(open ? 'edit' : undefined)}

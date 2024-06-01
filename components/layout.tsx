@@ -27,7 +27,12 @@ export function Header({ children }: PropsWithChildren<{}>) {
   );
 }
 
-export function Logo({ className, ...props }: LinkProps) {
+export function Logo({
+  className,
+  ...props
+}: Omit<LinkProps, 'href'> & { href?: LinkProps['href'] } & {
+  className?: string;
+}) {
   return (
     <Link
       className={cn('flex items-center text-lg font-medium', className)}

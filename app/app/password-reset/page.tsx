@@ -29,7 +29,7 @@ function AlertMessage({ type, message }: { type?: string; message: string }) {
 export default function PasswordReset({
   searchParams,
 }: {
-  searchParams: { message: string };
+  searchParams: { message: string; type: string };
 }) {
   const resetPassword = async (formData: FormData) => {
     'use server';

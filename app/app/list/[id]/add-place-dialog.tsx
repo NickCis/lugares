@@ -1,6 +1,16 @@
 'use client';
 
-import { forwardRef, useState, useRef, useEffect, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useState,
+  useRef,
+  useEffect,
+  useImperativeHandle,
+  type ReactNode,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ComponentProps,
+} from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -55,7 +65,7 @@ function InputWithAction({
   onAction: (v: string) => void;
   disabled?: boolean;
 }) {
-  const ref = useRef();
+  const ref = useRef<HTMLInputElement>(null);
   return (
     <div className="w-full flex space-x-1">
       <Input
@@ -63,11 +73,12 @@ function InputWithAction({
         className="flex-1"
         disabled={disabled}
         ref={ref}
-        onKeyPress={(event) => {
+        onKeyPress={(event: KeyboardEvent<HTMLInputElement>) => {
+          const target = event.target as HTMLInputElement;
           if (event.key === 'Enter') {
             event.preventDefault();
-            onAction(event.target.value);
-            event.target.value = '';
+            onAction(target.value);
+            target.value = '';
           }
         }}
       />
@@ -75,7 +86,7 @@ function InputWithAction({
         variant="ghost"
         size="icon"
         disabled={disabled}
-        onClick={(event) => {
+        onClick={(event: MouseEvent<HTMLButtonElement>) => {
           event.preventDefault();
           if (!ref.current) return;
           onAction(ref.current.value);
@@ -92,21 +103,47 @@ const InputForAutocomplete = forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement>
 >(({ className, ...props }, ref) => {
+  const innerRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => innerRef.current!, []);
   return (
     <div className="w-full flex space-x-1">
-      <Input ref={ref} className="flex-1" {...props} />
+      <Input ref={innerRef} className="flex-1" {...props} />
       <Button
         variant="ghost"
         size="icon"
         disabled={props.disabled}
         onClick={(event) => {
           event.preventDefault();
-          if (!ref.current) return;
+          if (!innerRef.current) return;
           if (!props.onKeyPress) return;
           props.onKeyPress({
-            target: ref.current,
+            altKey: false,
+            bubbles: true,
+            cancelable: true,
+            charCode: 13,
+            code: 'Enter',
+            ctrlKey: false,
+            currentTarget: innerRef.current,
+            defaultPrevented: true,
+            detail: 0,
+            eventPhase: 3,
+            isTrusted: true,
             key: 'Enter',
-          });
+            keyCode: 0,
+            locale: '',
+            location: 0,
+            metaKey: false,
+            repeat: false,
+            shiftKey: false,
+            target: innerRef.current,
+            type: 'keypress',
+            view: event.view,
+            which: 13,
+            preventDefault: () => {},
+            getModifierState: () => false,
+            isDefaultPrevented: () => true,
+            nativeEvent: event.nativeEvent,
+          } as any);
         }}
       >
         <Plus className="w-4 h-4" />
@@ -125,14 +162,19 @@ const DefaultValues = {
   urls: [],
 };
 
+interface ContentProps {
+  onClose: () => void;
+  listId: number | string;
+  tags: string[];
+  defaultValues?: z.infer<typeof formSchema>;
+}
+
 function Content({
   onClose,
   listId,
   tags,
   defaultValues = DefaultValues,
-}: {
-  onClose: () => void;
-}) {
+}: ContentProps) {
   const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -231,7 +273,7 @@ function Content({
                     control={form.control}
                     name={`tags.${index}`}
                     render={({ field }) => (
-                      <Badge variant="outlined" className="m-1 mb-0">
+                      <Badge variant="outline" className="m-1 mb-0">
                         {field.value}
                         <button
                           className="ml-1 text-destructive"
@@ -245,18 +287,16 @@ function Content({
                   />
                 ))}
               </div>
-              <Autocomplete
+              <Autocomplete<React.InputHTMLAttributes<HTMLInputElement>>
                 options={tags}
                 values={form.getValues('tags')}
                 Component={InputForAutocomplete}
-                placeholder="Enter new tag..."
-                disabled={isSubmitting}
-                empty={({ input }) => (
+                empty={({ input }: { input: string }) => (
                   <Item>
                     Create new tag <i className="ml-1">'{input}'</i>.
                   </Item>
                 )}
-                setValues={(f) => {
+                setValues={(f: string[] | ((v: string[]) => string[])) => {
                   const values = form.getValues('tags');
                   const next = typeof f === 'function' ? f(values) : f;
                   if (values.length > next.length) {
@@ -266,9 +306,11 @@ function Content({
                     tagsField.append(next[next.length - 1]);
                   }
                 }}
-                onCreateOption={(value) => {
+                onCreateOption={(value: string) => {
                   tagsField.append(value);
                 }}
+                disabled={isSubmitting}
+                placeholder="Enter new tag..."
               />
             </div>
           </div>
@@ -324,15 +366,19 @@ function Content({
   );
 }
 
+export interface AddPlaceDialogProps extends ComponentProps<typeof Dialog> {
+  listId: number | string;
+  defaultValues?: z.infer<typeof formSchema>;
+  tags: string[];
+  children?: ReactNode;
+}
 export function AddPlaceDialog({
   listId,
   children,
   defaultValues,
   tags,
   ...props
-}: {
-  children: ReactNode;
-}) {
+}: AddPlaceDialogProps) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen} {...props}>

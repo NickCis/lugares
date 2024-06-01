@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/tooltip';
 import { createClient } from '@/lib/supabase/server';
 
-export async function LogOutButton({ href }) {
+export async function LogOutButton() {
   const signOut = async () => {
     'use server';
 

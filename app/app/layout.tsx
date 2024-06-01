@@ -1,10 +1,11 @@
+import type { ReactElement } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-export default async function RootLayout({
+export default async function AppLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactElement;
 }) {
   const supabase = createClient();
   let user;
@@ -13,7 +14,10 @@ export default async function RootLayout({
     user = data.user;
   } catch (e) {}
 
-  if (!user) return redirect('/login');
+  if (!user) {
+    redirect('/login');
+    return;
+  }
 
   return children;
 }

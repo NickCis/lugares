@@ -1,6 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect,
+  type ReactNode,
+  type ComponentProps,
+} from 'react';
 import { Send, X, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -17,7 +22,18 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 
-function AcceptButton({ invite, onDone, userId }) {
+import type { InviteWithList } from '@/interfaces/invite';
+import type { User } from '@/interfaces/user';
+
+// fix-vim-highlight = }
+
+interface AcceptButtonProps {
+  invite: InviteWithList;
+  onDone: () => void;
+  userId: User['id'];
+}
+
+function AcceptButton({ invite, onDone, userId }: AcceptButtonProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   return (
@@ -49,7 +65,7 @@ function AcceptButton({ invite, onDone, userId }) {
           toast({
             variant: 'destructive',
             title: 'Uh oh! Something went wrong.',
-            description: error.message,
+            description: (error as Error).message,
           });
         } finally {
           setLoading(false);
@@ -61,7 +77,12 @@ function AcceptButton({ invite, onDone, userId }) {
   );
 }
 
-function DeleteButton({ invite, onDone }) {
+interface DeleteButtonProps {
+  invite: InviteWithList;
+  onDone: () => void;
+}
+
+function DeleteButton({ invite, onDone }: DeleteButtonProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   return (
@@ -85,7 +106,7 @@ function DeleteButton({ invite, onDone }) {
           toast({
             variant: 'destructive',
             title: 'Uh oh! Something went wrong.',
-            description: error.message,
+            description: (error as Error).message,
           });
         } finally {
           setLoading(false);
@@ -97,7 +118,12 @@ function DeleteButton({ invite, onDone }) {
   );
 }
 
-function Content({ invites, user }) {
+interface ContentProps {
+  invites: InviteWithList[];
+  user: User;
+}
+
+function Content({ invites, user }: ContentProps) {
   const router = useRouter();
   const handleClick = () => {
     router.refresh();
@@ -137,7 +163,18 @@ function Content({ invites, user }) {
   );
 }
 
-export function InvitesDialog({ invites, children, user, ...props }) {
+export interface InvitesDialogProps extends ComponentProps<typeof Dialog> {
+  invites: InviteWithList[];
+  user: User;
+  children?: ReactNode;
+}
+
+export function InvitesDialog({
+  invites,
+  children,
+  user,
+  ...props
+}: InvitesDialogProps) {
   return (
     <Dialog {...props}>
       {children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
