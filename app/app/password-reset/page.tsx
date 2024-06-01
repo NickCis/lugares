@@ -26,73 +26,33 @@ function AlertMessage({ type, message }: { type?: string; message: string }) {
   );
 }
 
-export default function Login({
+export default function PasswordReset({
   searchParams,
 }: {
   searchParams: { message: string };
 }) {
-  const signIn = async (formData: FormData) => {
-    'use server';
-
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      return redirect('/login?type=error&message=Could not authenticate user');
-    }
-
-    return redirect('/app');
-  };
-
-  const signUp = async (formData: FormData) => {
-    'use server';
-
-    const origin = headers().get('origin');
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      console.error('error', error);
-      return redirect(
-        `/login?type=error&message=Could not register user.|${encodeURIComponent(error.message)}`,
-      );
-    }
-
-    return redirect('/login?message=Check email to continue sign in process');
-  };
-
   const resetPassword = async (formData: FormData) => {
     'use server';
-    const origin = headers().get('origin');
-    const email = formData.get('email') as string;
+
+    const password = formData.get('password') as string;
+    const passwordCheck = formData.get('password-check') as string;
     const supabase = createClient();
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/callback?event=password-reset`,
+    if (password !== passwordCheck)
+      return redirect(
+        `/app/password-reset?type=error&message=${encodeURIComponent("Passwords don't match")}`,
+      );
+
+    const { error } = await supabase.auth.updateUser({
+      password,
     });
 
-    if (error) {
+    if (error)
       return redirect(
-        `/login?type=error&message=Could not reset password.|${encodeURIComponent(error.message)}`,
+        `/app/password-reset?type=error&message=${encodeURIComponent(error.message)}`,
       );
-    }
 
-    return redirect('/login?message=Check email to continue the process');
+    return redirect('/app');
   };
 
   return (
@@ -104,23 +64,25 @@ export default function Login({
         <form className="-mt-14">
           <div className="flex-1 flex w-full flex-col justify-center space-y-6">
             <div className="flex flex-col w-full space-y-2 text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Reset Password
+              </h1>
               <p className="text-sm text-muted-foreground">
-                Enter your details below to sign in
+                Enter your new password below
               </p>
             </div>
             <div className="grid gap-2">
               <div className="grid gap-1">
                 <Label className="sr-only" htmlFor="email">
-                  Email
+                  Password
                 </Label>
                 <Input
-                  id="email"
-                  name="email"
-                  placeholder="name@example.com"
-                  type="email"
+                  id="password"
+                  name="password"
+                  placeholder="••••••••"
+                  type="password"
                   autoCapitalize="none"
-                  autoComplete="email"
+                  autoComplete="off"
                   autoCorrect="off"
                   required
                 />
@@ -130,8 +92,8 @@ export default function Login({
                   Password
                 </Label>
                 <Input
-                  id="password"
-                  name="password"
+                  id="password-check"
+                  name="password-check"
                   type="password"
                   placeholder="••••••••"
                   autoCapitalize="none"
@@ -146,39 +108,13 @@ export default function Login({
                   type={searchParams?.type}
                 />
               )}
-              <SubmitButton formAction={signIn} pendingText="Signing In...">
-                Sign In
+              <SubmitButton
+                formAction={resetPassword}
+                pendingText="Resetting password..."
+              >
+                Reset password
               </SubmitButton>
-              <div className="text-right">
-                <SubmitButton
-                  variant="link"
-                  formAction={resetPassword}
-                  pendingText="Reseting..."
-                  className="text-xs h-auto p-0 text-muted-foreground hover:text-primary"
-                  formNoValidate
-                >
-                  Forgot password?
-                </SubmitButton>
-              </div>
             </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or create new account
-                </span>
-              </div>
-            </div>
-            <SubmitButton
-              variant="outline"
-              type="button"
-              formAction={signUp}
-              pendingText="Signing Up..."
-            >
-              Sign Up
-            </SubmitButton>
             <p className="px-8 text-center text-sm text-muted-foreground">
               By clicking continue, you agree to our{' '}
               <Link
