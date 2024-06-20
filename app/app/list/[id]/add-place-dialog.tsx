@@ -42,6 +42,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 import { Autocomplete, Item } from '@/components/autocomplete';
+import { ConfirmAlertDialog } from '@/components/confirm-alert-dialog';
 
 // fix-vim-highlight = }
 
@@ -54,6 +55,13 @@ const formSchema = z.object({
   description: z.string(),
   tags: z.array(z.string()),
   urls: z.array(z.string().url()),
+  address: z.string().optional(),
+  location: z
+    .object({
+      lat: z.number(),
+      lon: z.number(),
+    })
+    .optional(),
 });
 
 function InputWithAction({
@@ -175,6 +183,7 @@ function Content({
   tags,
   defaultValues = DefaultValues,
 }: ContentProps) {
+  const [gmapsDialog, setGmapsDialog] = useState<string>();
   const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -193,27 +202,35 @@ function Content({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const supabase = createClient();
+    const valuesBag: {
+      title: string;
+      description: string;
+      tags: string[];
+      urls: string[];
+      list_id: string | number;
+      address?: string;
+      location?: string;
+    } = {
+      title: values.title,
+      description: values.description,
+      tags: values.tags,
+      urls: values.urls,
+      list_id: listId,
+    };
+
+    if (values.address) valuesBag.address = values.address;
+    if (values.location)
+      valuesBag.location = `(${values.location.lon},${values.location.lat})`;
+
     if (values.id) {
       const { error } = await supabase
         .from('places')
-        .update({
-          title: values.title,
-          description: values.description,
-          tags: values.tags,
-          urls: values.urls,
-          list_id: listId,
-        })
+        .update(valuesBag)
         .eq('id', values.id);
 
       if (error) throw error;
     } else {
-      const { error } = await supabase.from('places').insert({
-        title: values.title,
-        description: values.description,
-        tags: values.tags,
-        urls: values.urls,
-        list_id: listId,
-      });
+      const { error } = await supabase.from('places').insert(valuesBag);
 
       if (error) throw error;
     }
@@ -222,146 +239,205 @@ function Content({
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <DialogHeader>
-          <DialogTitle>{`${defaultValues.id ? 'Edit' : 'Add'} new place`}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 pt-4 pb-4">
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Title</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Title"
-                    disabled={isSubmitting}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter description..."
-                    disabled={isSubmitting}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <div className="flex flex-col space-y-2">
-              <div className="flex flex-wrap -mt-1 -mr-1 -ml-1">
-                {tagsField.fields.map((field, index) => (
+    <>
+      <ConfirmAlertDialog
+        open={!!gmapsDialog}
+        onOpenChange={(open) => {
+          if (!open) setGmapsDialog(undefined);
+        }}
+        title="Do you want to import data from Google Maps?"
+        description="This will override existing data."
+        onAction={async (event) => {
+          event.preventDefault();
+          const res = await fetch('/api/gmaps', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: gmapsDialog }),
+          });
+          const json = await res.json();
+
+          const tags = form.getValues('tags');
+          const addTag = (tag: string) => {
+            if (!tags.includes(tag)) tagsField.append(tag);
+          };
+          const urls = form.getValues('urls');
+          const addURL = (url: string) => {
+            if (!urls.includes(url)) urlsField.append(url);
+          };
+
+          if (json.categories) {
+            for (const category of json.categories) {
+              addTag(`category:${category}`);
+            }
+          }
+
+          if (json.opinions.price) addTag(`price:${json.opinions.price}`);
+          if (json.opinions.score) addTag(`score:${json.opinions.score}`);
+
+          if (json.links.menu) addURL(json.links.menu);
+          if (json.links.order) addURL(json.links.order);
+          if (json.links.table) addURL(json.links.table);
+          if (json.links.web) addURL(json.links.web);
+          if (json.links.tel) addURL(`tel:${json.links.tel}`);
+          if (json.name) form.setValue('title', json.name);
+          if (json.address) form.setValue('address', json.address.join(','));
+          if (json.coords) form.setValue('location', json.coords);
+          form.setValue(
+            'description',
+            `Price: ${json.opinions.price}\nScore: ${json.opinions.score} (${json.opinions.amount})`,
+          );
+
+          setGmapsDialog(undefined);
+        }}
+        action="Import"
+      />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>{`${defaultValues.id ? 'Edit' : 'Add'} new place`}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4 pb-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Title"
+                      disabled={isSubmitting}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter description..."
+                      disabled={isSubmitting}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-col space-y-2">
+                <div className="flex flex-wrap -mt-1 -mr-1 -ml-1">
+                  {tagsField.fields.map((field, index) => (
+                    <FormField
+                      key={field.id}
+                      control={form.control}
+                      name={`tags.${index}`}
+                      render={({ field }) => (
+                        <Badge variant="outline" className="m-1 mb-0">
+                          {field.value}
+                          <button
+                            className="ml-1 text-destructive"
+                            onClick={() => tagsField.remove(index)}
+                            disabled={isSubmitting}
+                          >
+                            <Trash className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      )}
+                    />
+                  ))}
+                </div>
+                <Autocomplete<React.InputHTMLAttributes<HTMLInputElement>>
+                  options={tags}
+                  values={form.getValues('tags')}
+                  Component={InputForAutocomplete}
+                  empty={({ input }: { input: string }) => (
+                    <Item>
+                      Create new tag <i className="ml-1">'{input}'</i>.
+                    </Item>
+                  )}
+                  setValues={(f: string[] | ((v: string[]) => string[])) => {
+                    const values = form.getValues('tags');
+                    const next = typeof f === 'function' ? f(values) : f;
+                    if (values.length > next.length) {
+                      const removed = values.findIndex(
+                        (v) => !next.includes(v),
+                      );
+                      if (removed > -1) tagsField.remove(removed);
+                    } else if (values.length < next.length) {
+                      tagsField.append(next[next.length - 1]);
+                    }
+                  }}
+                  onCreateOption={(value: string) => {
+                    tagsField.append(value);
+                  }}
+                  disabled={isSubmitting}
+                  placeholder="Enter new tag..."
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>URLs</Label>
+              <div className="flex flex-col space-y-2">
+                {urlsField.fields.map((field, index) => (
                   <FormField
                     key={field.id}
                     control={form.control}
-                    name={`tags.${index}`}
+                    name={`urls.${index}`}
                     render={({ field }) => (
-                      <Badge variant="outline" className="m-1 mb-0">
-                        {field.value}
-                        <button
-                          className="ml-1 text-destructive"
-                          onClick={() => tagsField.remove(index)}
-                          disabled={isSubmitting}
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </Badge>
+                      <div className="space-y-1">
+                        <div className="w-full flex space-x-1">
+                          <Input
+                            className="flex-1"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                          <Button
+                            className="text-destructive"
+                            variant="ghost"
+                            size="icon"
+                            disabled={isSubmitting}
+                            onClick={() => urlsField.remove(index)}
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <FormMessage className="text-xs" />
+                      </div>
                     )}
                   />
                 ))}
-              </div>
-              <Autocomplete<React.InputHTMLAttributes<HTMLInputElement>>
-                options={tags}
-                values={form.getValues('tags')}
-                Component={InputForAutocomplete}
-                empty={({ input }: { input: string }) => (
-                  <Item>
-                    Create new tag <i className="ml-1">'{input}'</i>.
-                  </Item>
-                )}
-                setValues={(f: string[] | ((v: string[]) => string[])) => {
-                  const values = form.getValues('tags');
-                  const next = typeof f === 'function' ? f(values) : f;
-                  if (values.length > next.length) {
-                    const removed = values.findIndex((v) => !next.includes(v));
-                    if (removed > -1) tagsField.remove(removed);
-                  } else if (values.length < next.length) {
-                    tagsField.append(next[next.length - 1]);
-                  }
-                }}
-                onCreateOption={(value: string) => {
-                  tagsField.append(value);
-                }}
-                disabled={isSubmitting}
-                placeholder="Enter new tag..."
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>URLs</Label>
-            <div className="flex flex-col space-y-2">
-              {urlsField.fields.map((field, index) => (
-                <FormField
-                  key={field.id}
-                  control={form.control}
-                  name={`urls.${index}`}
-                  render={({ field }) => (
-                    <div className="space-y-1">
-                      <div className="w-full flex space-x-1">
-                        <Input
-                          className="flex-1"
-                          disabled={isSubmitting}
-                          {...field}
-                        />
-                        <Button
-                          className="text-destructive"
-                          variant="ghost"
-                          size="icon"
-                          disabled={isSubmitting}
-                          onClick={() => urlsField.remove(index)}
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <FormMessage className="text-xs" />
-                    </div>
-                  )}
+                <InputWithAction
+                  placeholder="Enter new url..."
+                  disabled={isSubmitting}
+                  onAction={(value) => {
+                    if (!value) return;
+                    if (value.match(/^https:\/\/maps\.app\.goo\.gl\//i))
+                      setGmapsDialog(value);
+                    urlsField.append(value);
+                  }}
                 />
-              ))}
-              <InputWithAction
-                placeholder="Enter new url..."
-                disabled={isSubmitting}
-                onAction={(value) => {
-                  if (!value) return;
-                  urlsField.append(value);
-                }}
-              />
+              </div>
             </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button type="submit" disabled={isSubmitting}>
-            {defaultValues.id ? 'Update' : 'Create'}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
+          <DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {defaultValues.id ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </>
   );
 }
 
