@@ -118,7 +118,7 @@ export function Map({ listId, filters, places }: MapProps) {
       <MapContainer
         center={initialCenter}
         zoom={13}
-        className="h-screen w-screen"
+        className="h-dvh w-screen"
         attributionControl={false}
         zoomControl={false}
       >
