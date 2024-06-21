@@ -8,10 +8,16 @@ import { cn } from '@/lib/utils';
 
 const Input = forwardRef<
   HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, ...props }, ref) => {
+  React.InputHTMLAttributes<HTMLInputElement> & { wrapperClassName?: string }
+>(({ className, wrapperClassName, ...props }, ref) => {
   return (
-    <div className="flex items-center rounded-lg border px-3" ref={ref}>
+    <div
+      className={cn(
+        'flex items-center rounded-lg border px-3',
+        wrapperClassName,
+      )}
+      ref={ref}
+    >
       <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
       <input
         placeholder="Search by tag..."
@@ -33,7 +39,7 @@ export interface TagFilterProps {
   url: string;
 }
 
-export function TagFilter({ tags, filters, url }: TagFilterProps) {
+export function TagFilter({ tags, filters, url, ...rest }: TagFilterProps) {
   const router = useRouter();
   function setValues(f: string[] | ((v: string[]) => string[])) {
     const next = typeof f === 'function' ? f(filters) : f;
@@ -47,6 +53,7 @@ export function TagFilter({ tags, filters, url }: TagFilterProps) {
       setValues={setValues}
       Component={Input}
       empty="No tag found."
+      {...rest}
     />
   );
 }

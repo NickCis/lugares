@@ -247,7 +247,7 @@ export function Autocomplete<Props extends HTMLProps<HTMLInputElement>>({
       </PopoverAnchor>
       <PopoverContent
         onOpenAutoFocus={(event) => event.preventDefault()}
-        className="p-1 w-[--radix-popover-trigger-width]"
+        className="p-1 w-[--radix-popover-trigger-width] z-[500]"
       >
         <Content
           options={options}

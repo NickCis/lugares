@@ -55,9 +55,10 @@ import { AddPlaceDialog } from './add-place-dialog';
 
 interface IconLinkProps {
   href: string;
+  className?: string;
 }
 
-function IconLink({ href }: IconLinkProps) {
+export function IconLink({ href, className }: IconLinkProps) {
   const Icon = href.match(/^\s*https?:\/\/(www\.)?instagram\.com/i)
     ? Instagram
     : href.match(
@@ -82,6 +83,7 @@ function IconLink({ href }: IconLinkProps) {
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'icon' }),
               'text-xs w-7 h-7',
+              className,
             )}
           >
             <Icon className="w-4 h-4" />

@@ -222,6 +222,7 @@ function Content({
     if (values.location)
       valuesBag.location = `(${values.location.lon},${values.location.lat})`;
 
+    console.log('valuesBag', valuesBag);
     if (values.id) {
       const { error } = await supabase
         .from('places')

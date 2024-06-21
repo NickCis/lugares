@@ -6,4 +6,5 @@ export interface Place {
   urls: string[];
   list_id: string | number;
   inserted_at: string;
+  location?: string;
 }

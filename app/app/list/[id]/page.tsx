@@ -1,31 +1,18 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Plus, Map } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { Content } from '@/components/layout';
-import { Button } from '@/components/ui/button';
-import { normalize } from '@/lib/string';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Wrapper } from '@/app/app/wrapper';
 import type { Place } from '@/interfaces/place';
 
+import { get } from './data';
 import { AddPlaceDialog } from './add-place-dialog';
 import { PlaceCard } from './place-card';
 import { TagFilter } from './tag-filter';
 import { TagBadge } from './tag-badge';
-
-function getTags(places: Place[]): string[] {
-  const set = new Set<string>();
-  for (const place of places) {
-    for (const tag of place.tags) {
-      set.add(tag);
-    }
-  }
-
-  const entries = Array.from(set);
-  entries.sort((a, b) => a.localeCompare(b));
-
-  return entries;
-}
 
 export interface ListProps {
   params: { id: string };
@@ -39,33 +26,15 @@ export default async function List({ params, searchParams }: ListProps) {
   } = await supabase.auth.getUser();
   if (!user) return;
   const listId = params.id;
-  const { data } = await supabase
-    .from('lists')
-    .select('*, places(*)')
-    .eq('id', listId);
 
-  const list = data?.[0];
+  const { list, places, tags, availableTags, filters } = await get(
+    listId,
+    searchParams.tags || [],
+  );
 
   if (!list) {
     redirect('/app');
     return;
-  }
-
-  const tags = getTags(list.places);
-  let places = list.places as Place[];
-
-  let filters: string[] = [];
-  if (searchParams.tags) {
-    filters = Array.isArray(searchParams.tags)
-      ? searchParams.tags
-      : [searchParams.tags];
-
-    places = places.filter(({ tags }) =>
-      filters.every((f) => {
-        const n = normalize(f);
-        return tags.some((t) => normalize(t) === n);
-      }),
-    );
   }
 
   const url = `/app/list/${listId}`;
@@ -76,6 +45,12 @@ export default async function List({ params, searchParams }: ListProps) {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl font-bold tracking-tight">{list.title}</h2>
           <div className="flex items-center space-x-2">
+            <Link
+              className={buttonVariants({ variant: 'outline', size: 'icon' })}
+              href={`${url}/map`}
+            >
+              <Map className="h-4 w-4" />
+            </Link>
             <AddPlaceDialog listId={listId} tags={tags}>
               <Button>
                 <Plus className="mr-2 h-4 w-4" /> New Place
@@ -84,7 +59,7 @@ export default async function List({ params, searchParams }: ListProps) {
           </div>
         </div>
         <div className="mb-2">
-          <TagFilter tags={tags} url={url} filters={filters} />
+          <TagFilter tags={availableTags} url={url} filters={filters} />
         </div>
         <div className="flex flex-wrap mb-2 -mx-1">
           {filters.map((filter, index) => (
