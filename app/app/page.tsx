@@ -33,16 +33,17 @@ export default async function App() {
             </AddListDialog>
           </div>
         </div>
-        <div className="flex space-y-2">
+        <div className="flex flex-wrap -mx-1">
           {lists.map((list) => (
-            <ListCard
-              key={list.id}
-              id={list.id}
-              title={list.title}
-              description={list.description}
-              isPrivate={list.private}
-              insertedAt={list.inserted_at}
-            />
+            <div className="w-full sm:w-1/2 md:w-1/3 p-1 flex" key={list.id}>
+              <ListCard
+                id={list.id}
+                title={list.title}
+                description={list.description}
+                isPrivate={list.private}
+                insertedAt={list.inserted_at}
+              />
+            </div>
           ))}
         </div>
       </Content>
